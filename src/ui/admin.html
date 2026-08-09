@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ChatterApp Admin</title>
+    <link rel="stylesheet" href="/styles/style.css" />
+  </head>
+  <body>
+    <div id="adminLoginOverlay" class="modalOverlay">
+      <div id="adminLoginModal" class="modalBox">
+        <h2>Admin Login</h2>
+        <p>Enter your admin credentials to view all rooms and messages.</p>
+        <input type="text" id="adminUserInput" placeholder="Username" autofocus />
+        <input type="password" id="adminPassInput" placeholder="Password" />
+        <div id="adminLoginError" class="formError">Invalid username or password.</div>
+        <button id="adminLoginBtn">Login</button>
+      </div>
+    </div>
+
+    <div id="adminDashboard" style="display: none">
+      <div id="adminHeader">
+        <h2>All Chatrooms (Live)</h2>
+        <div id="adminHeaderActions">
+          <span id="liveStatus">Live: connecting...</span>
+          <button id="refreshBtn">Refresh</button>
+          <button id="logoutBtn">Logout</button>
+        </div>
+      </div>
+
+      <div id="roomsGrid"></div>
+      <div id="emptyGridMessage">No rooms yet.</div>
+    </div>
+  </body>
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    let authHeader = "";
+    let liveSocket = null;
+    const roomBoxes = new Map(); // room name -> { boxEl, messagesEl }
+
+    const adminLoginOverlay = document.getElementById("adminLoginOverlay");
+    const adminDashboard = document.getElementById("adminDashboard");
+    const adminUserInput = document.getElementById("adminUserInput");
+    const adminPassInput = document.getElementById("adminPassInput");
+    const adminLoginError = document.getElementById("adminLoginError");
+    const adminLoginBtn = document.getElementById("adminLoginBtn");
+    const refreshBtn = document.getElementById("refreshBtn");
+    const logoutBtn = document.getElementById("logoutBtn");
+    const liveStatus = document.getElementById("liveStatus");
+    const roomsGrid = document.getElementById("roomsGrid");
+    const emptyGridMessage = document.getElementById("emptyGridMessage");
+
+    async function fetchFromAdminApi(path) {
+      const res = await fetch(path, {
+        headers: { Authorization: authHeader },
+      });
+      if (!res.ok) {
+        const err = new Error("Request failed with status " + res.status);
+        err.status = res.status;
+        throw err;
+      }
+      return res.json();
+    }
+
+    function getOrCreateRoomBox(room) {
+      if (roomBoxes.has(room)) return roomBoxes.get(room);
+
+      const boxEl = document.createElement("div");
+      boxEl.className = "roomBox";
+
+      const headerEl = document.createElement("div");
+      headerEl.className = "roomBoxHeader";
+      headerEl.textContent = room;
+
+      const messagesEl = document.createElement("div");
+      messagesEl.className = "roomBoxMessages";
+
+      boxEl.append(headerEl, messagesEl);
+      roomsGrid.appendChild(boxEl);
+      emptyGridMessage.style.display = "none";
+
+      const entry = { boxEl, messagesEl };
+      roomBoxes.set(room, entry);
+      return entry;
+    }
+
+    function appendLine(room, userName, text, isSystem) {
+      const { messagesEl } = getOrCreateRoomBox(room);
+      const line = document.createElement("div");
+      line.className = isSystem ? "roomBoxLine roomBoxSystemLine" : "roomBoxLine";
+
+      const nameEl = document.createElement("strong");
+      nameEl.textContent = userName;
+
+      line.append(nameEl, document.createTextNode(`: ${text}`));
+      messagesEl.appendChild(line);
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+
+    function resetBoxes() {
+      roomBoxes.clear();
+      roomsGrid.innerHTML = "";
+      emptyGridMessage.style.display = "block";
+    }
+
+    async function loadHistory() {
+      const [messages, joins] = await Promise.all([
+        fetchFromAdminApi("/admin/messages"),
+        fetchFromAdminApi("/admin/joins"),
+      ]);
+
+      // Build one combined, chronological timeline per room so each box
+      // reads top-to-bottom like a real transcript (oldest first).
+      const events = [
+        ...joins.map((j) => ({ room: j.room, at: new Date(j.joinedAt), kind: "join", userName: j.userName })),
+        ...messages.map((m) => ({ room: m.room, at: new Date(m.timestamp), kind: "message", userName: m.userName, message: m.message })),
+      ].sort((a, b) => a.at - b.at);
+
+      resetBoxes();
+      events.forEach((e) => {
+        if (e.kind === "join") {
+          appendLine(e.room, e.userName, "joined the chat", true);
+        } else {
+          appendLine(e.room, e.userName, e.message, false);
+        }
+      });
+    }
+
+    function connectLiveFeed(username, password) {
+      if (liveSocket) {
+        liveSocket.disconnect();
+      }
+
+      liveSocket = io("/admin", { auth: { username, password } });
+
+      liveSocket.on("connect", () => {
+        liveStatus.textContent = "Live: connected";
+      });
+
+      liveSocket.on("disconnect", () => {
+        liveStatus.textContent = "Live: disconnected";
+      });
+
+      liveSocket.on("connect_error", () => {
+        liveStatus.textContent = "Live: connection failed";
+      });
+
+      liveSocket.on("adminMessage", (data) => {
+        appendLine(data.room, data.userName, data.message, false);
+      });
+
+      liveSocket.on("adminUserJoined", (data) => {
+        appendLine(data.room, data.userName, "joined the chat", true);
+      });
+
+      liveSocket.on("adminUserLeft", (data) => {
+        appendLine(data.room, data.userName, "left the chat", true);
+      });
+    }
+
+    async function attemptLogin(username, password) {
+      if (!username || !password) {
+        adminLoginError.textContent = "Username and password are both required.";
+        adminLoginError.style.display = "block";
+        return;
+      }
+
+      authHeader = "Basic " + btoa(`${username}:${password}`);
+      try {
+        await loadHistory();
+        connectLiveFeed(username, password);
+        adminLoginOverlay.remove();
+        adminDashboard.style.display = "flex";
+      } catch (err) {
+        authHeader = "";
+        adminLoginError.textContent =
+          err.status === 401
+            ? "Invalid username or password."
+            : "Server error - could not reach the message log. Is the server and database running?";
+        adminLoginError.style.display = "block";
+        adminPassInput.value = "";
+      }
+    }
+
+    adminLoginBtn.addEventListener("click", () => {
+      attemptLogin(adminUserInput.value.trim(), adminPassInput.value);
+    });
+
+    [adminUserInput, adminPassInput].forEach((input) => {
+      input.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          adminLoginBtn.click();
+        }
+      });
+    });
+
+    refreshBtn.addEventListener("click", async () => {
+      try {
+        await loadHistory();
+      } catch (err) {
+        alert("Session expired or server unreachable. Please log in again.");
+        location.reload();
+      }
+    });
+
+    logoutBtn.addEventListener("click", () => {
+      if (liveSocket) liveSocket.disconnect();
+      authHeader = "";
+      location.reload();
+    });
+  </script>
+</html>

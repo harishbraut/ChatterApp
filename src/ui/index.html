@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+    <link rel="stylesheet" href="/styles/style.css" />
+  </head>
+  <body>
+    <div id="nameModalOverlay" class="modalOverlay">
+      <div id="nameModal" class="modalBox">
+        <h2>Welcome!</h2>
+        <p>Please enter your name and a room to join.</p>
+        <input type="text" id="nameInput" placeholder="Your name..." autofocus />
+        <input type="text" id="roomInput" placeholder="Room name..." />
+        <div id="nameError" class="formError">Name and room are both required.</div>
+        <button id="nameSubmitBtn">Join Chat</button>
+      </div>
+    </div>
+    <div id="mainDiv">
+      <div id="main-container">
+        <div id="headerDiv">
+          <div id="headerLeft"></div>
+          <button id="leaveRoomBtn" style="display: none">Leave Room</button>
+        </div>
+
+        <div id="chatWindow"></div>
+
+        <div id="footer">
+          <div id="footerElements">
+            <input
+              type="text"
+              id="messageInput"
+              placeholder="Type a message..."
+            />
+            <button id="sendButton">Send</button>
+          </div>
+        </div>
+      </div>
+      <div id="userInfo">
+        <div id="userListDiv">
+          <div id="titleBar">Connected Users</div>
+        </div>
+        <!-- <div class="item">User 1</div> -->
+      </div>
+    </div>
+  </body>
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+    let userName = "";
+    let roomName = "";
+
+    const headerDiv = document.getElementById("headerDiv");
+    const headerLeft = document.getElementById("headerLeft");
+    const leaveRoomBtn = document.getElementById("leaveRoomBtn");
+    const nameModalOverlay = document.getElementById("nameModalOverlay");
+    const nameInput = document.getElementById("nameInput");
+    const roomInput = document.getElementById("roomInput");
+    const nameError = document.getElementById("nameError");
+    const nameSubmitBtn = document.getElementById("nameSubmitBtn");
+
+    function addUserToList(name) {
+      const newUserDiv = document.createElement("div");
+      newUserDiv.classList.add("item");
+      newUserDiv.setAttribute("data-username", name);
+      newUserDiv.textContent = name;
+      userInfo.appendChild(newUserDiv);
+    }
+
+    function renderChatMessage(data, align) {
+      const messageElement = document.createElement("div");
+      messageElement.setAttribute(
+        "class",
+        `chatMessages ${align === "right" ? "ownMessage" : "theirMessage"}`
+      );
+      messageElement.style.textAlign = align;
+      messageElement.style.alignSelf = align === "right" ? "flex-end" : "flex-start";
+
+      const userNameSpan = document.createElement("span");
+      userNameSpan.className = "messageUserName";
+      const strong = document.createElement("strong");
+      strong.textContent = data.userName;
+      userNameSpan.appendChild(strong);
+
+      const textSpan = document.createElement("span");
+      textSpan.className = "messageText";
+      textSpan.textContent = data.message;
+
+      messageElement.append(userNameSpan, textSpan);
+      chatWindow.appendChild(messageElement);
+    }
+
+    function joinChat() {
+      const enteredName = nameInput.value.trim();
+      const enteredRoom = roomInput.value.trim();
+      if (!enteredName || !enteredRoom) {
+        nameError.style.display = "block";
+        (enteredName ? roomInput : nameInput).focus();
+        return;
+      }
+      userName = enteredName;
+      roomName = enteredRoom;
+      nameModalOverlay.remove();
+
+      socket.emit("newUser", { userName, room: roomName });
+      addUserToList(userName);
+
+      const userNameDisplay = document.createElement("div");
+      userNameDisplay.setAttribute("id", "userNameDisplay");
+      userNameDisplay.textContent = `Welcome, ${userName} (Room: ${roomName})`;
+      headerLeft.appendChild(userNameDisplay);
+
+      leaveRoomBtn.style.display = "inline-block";
+    }
+
+    nameSubmitBtn.addEventListener("click", joinChat);
+    [nameInput, roomInput].forEach((input) => {
+      input.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          joinChat();
+        }
+      });
+    });
+    nameInput.focus();
+
+    leaveRoomBtn.addEventListener("click", () => {
+      socket.disconnect();
+      location.reload();
+    });
+
+    const chatWindow = document.getElementById("chatWindow");
+    const messageInput = document.getElementById("messageInput");
+    const sendButton = document.getElementById("sendButton");
+    const userInfo = document.getElementById("userInfo");
+
+    socket.on("userJoined", function (hisName) {
+      addUserToList(hisName);
+    });
+
+    socket.on("currentUsers", function (userList) {
+      userList.forEach(addUserToList);
+    });
+
+    socket.on("userLeft", function (hisName) {
+      const userDiv = userInfo.querySelector(`[data-username="${hisName}"]`);
+      if (userDiv) {
+        userDiv.remove();
+      }
+    });
+
+    messageInput.addEventListener("input", function () {
+      if (messageInput.value.trim() !== "") {
+        socket.emit("typing", userName);
+      } else {
+        socket.emit("stopTyping", userName);
+      }
+    });
+
+    socket.on("displayTyping", (typingUser) => {
+      // Remove any existing typingStatus div
+      const oldTypingStatus = document.getElementById("typingStatus");
+      if (oldTypingStatus) {
+        oldTypingStatus.remove();
+      }
+      // Only show typing status if typingUser is not empty
+      if (typingUser && typingUser.trim() !== "") {
+        const typingStatus = document.createElement("div");
+        typingStatus.setAttribute("id", "typingStatus");
+        typingStatus.textContent = `${typingUser} is typing...`;
+        headerLeft.appendChild(typingStatus);
+      }
+    });
+
+    socket.on("removeTyping", (typingUser) => {
+      const oldTypingStatus = document.getElementById("typingStatus");
+      if (oldTypingStatus) {
+        oldTypingStatus.remove();
+      }
+    });
+
+    sendButton.addEventListener("click", () => {
+      let data = {};
+      data.message = messageInput.value;
+      data.userName = userName;
+      if (data.message) {
+        renderChatMessage(data, "right");
+        messageInput.value = "";
+        socket.emit("stopTyping", userName);
+      }
+
+      socket.emit("chatMessage", data);
+    });
+
+    socket.on("broadcastedMessage", (data) => {
+      renderChatMessage(data, "left");
+    });
+  </script>
+</html>
