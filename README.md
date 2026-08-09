@@ -45,6 +45,10 @@ Open the admin panel in another browser tab:
 
 ### 4. Monitor Chatrooms
 
+You will see chats like this 
+
+![Admin Panel](./src/ui/Adminpanel.png)
+
 The admin panel provides an overview of what's happening across the chatrooms.
 
 From the admin UI, you can monitor:
