@@ -8,7 +8,7 @@ Follow the steps below to test the chat functionality and monitor chatrooms thro
 
 Open the application in **two separate browser tabs**:
 
-The app is deployed on Render.com so it does take 30 minutes to spin up the live site.
+**The app is deployed on Render.com so it does take 30 seconds to spin up the live site first time you open it**
 
 [Chatter App](https://chatterapp-e33u.onrender.com)
 
