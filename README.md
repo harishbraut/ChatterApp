@@ -8,7 +8,9 @@ Follow the steps below to test the chat functionality and monitor chatrooms thro
 
 Open the application in **two separate browser tabs**:
 
-[Chatter App](https://chatterapp-e33u.onrender.com?utm_source=chatgpt.com)
+The app is deployed on Render.com so it does take 30 minutes to spin up the live site.
+
+[Chatter App](https://chatterapp-e33u.onrender.com)
 
 This is how chat ui looks like 
 
