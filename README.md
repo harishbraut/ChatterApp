@@ -1,13 +1,61 @@
 # Deployed on Render.com
 
-# Steps to use app
-    - open site https://chatterapp-e33u.onrender.com in one browser tab. fill username and give room id as room1 
-    - open site https://chatterapp-e33u.onrender.com in another browser tab. fill username2 and give room id as room1
-    - send messages from one Ui to another 
-    - Now open admin panel from this link https://chatterapp-e33u.onrender.com/admin.html 
-    - you will see a admin page from where you will see below ui.
-    - from here you can see what's going on in any chatroom 
-    <img width="1366" height="649" alt="image" src="https://github.com/user-attachments/assets/e595339d-49b8-46d9-a8f0-f5886574ac42" />
+## Testing the Chat Application
+
+Follow the steps below to test the chat functionality and monitor chatrooms through the admin panel.
+
+### 1. Open the Chat Application
+
+Open the application in **two separate browser tabs**:
+
+[Chatter App](https://chatterapp-e33u.onrender.com?utm_source=chatgpt.com)
+
+#### Tab 1
+
+* Enter the username: `username1`
+* Enter the Room ID: `room1`
+* Join the chatroom.
+
+#### Tab 2
+
+* Enter the username: `username2`
+* Enter the Room ID: `room1`
+* Join the chatroom.
+
+### 2. Test Messaging
+
+Send messages from either tab.
+
+You should be able to see messages sent from one user appear in the other user's UI in real time.
+
+For example:
+
+```text
+username1 → Hello from username1!
+username2 → Hello! I received your message.
+```
+
+Both users are connected to the same room (`room1`), so they can communicate with each other.
+
+### 3. Open the Admin Panel
+
+Open the admin panel in another browser tab:
+
+[Admin Panel](https://chatterapp-e33u.onrender.com/admin.html?utm_source=chatgpt.com)
+
+### 4. Monitor Chatrooms
+
+The admin panel provides an overview of what's happening across the chatrooms.
+
+From the admin UI, you can monitor:
+
+* Active chatrooms
+* Users connected to each room
+* Messages being exchanged
+* Chat activity in real time
+
+This allows you to see **what's going on in any chatroom** from a centralized admin interface.
+
 
 # ChatterApp
 
