@@ -1,3 +1,14 @@
+# Deployed on Render.com
+
+# Steps to use app
+    - open site https://chatterapp-e33u.onrender.com in one browser tab. fill username and give room id as room1 
+    - open site https://chatterapp-e33u.onrender.com in another browser tab. fill username2 and give room id as room1
+    - send messages from one Ui to another 
+    - Now open admin panel from this link https://chatterapp-e33u.onrender.com/admin.html 
+    - you will see a admin page from where you will see below ui.
+    - from here you can see what's going on in any chatroom 
+    <img width="1366" height="649" alt="image" src="https://github.com/user-attachments/assets/e595339d-49b8-46d9-a8f0-f5886574ac42" />
+
 # ChatterApp
 
 A lightweight real-time, room-based chat app built with **Socket.IO**, **Express**, and **MongoDB**. Anyone can join a named room, chat live with everyone else in it, and every message is persisted so an admin can watch every room live from a separate dashboard.
