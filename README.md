@@ -10,6 +10,11 @@ Open the application in **two separate browser tabs**:
 
 [Chatter App](https://chatterapp-e33u.onrender.com?utm_source=chatgpt.com)
 
+This is how chat ui looks like 
+
+![Chat Panel](./src/ui/ChatPanel.png)
+
+
 #### Tab 1
 
 * Enter the username: `username1`
